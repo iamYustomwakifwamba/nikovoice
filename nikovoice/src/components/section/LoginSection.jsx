@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+
+import { useAuth } from "../../auth/useAuth";
 
 function GoogleLogo({ size = 18 }) {
   return (
@@ -36,7 +38,10 @@ const inputClass = (hasError) =>
     hasError ? "border-red-500" : "border-gray-300"
   }`;
 
-function LoginSection({ onLogin, onGoogle }) {
+function LoginSection({ onGoogle }) {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -46,22 +51,63 @@ function LoginSection({ onLogin, onGoogle }) {
 
   const submit = async (e) => {
     e.preventDefault();
+
     if (loading) return;
 
     const next = {};
+
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
       next.email = "Enter a valid email address";
     }
-    if (!password) next.password = "Enter your password";
+
+    if (!password) {
+      next.password = "Enter your password";
+    }
+
     setErrors(next);
     setFormError("");
+
     if (Object.keys(next).length) return;
 
     setLoading(true);
+
     try {
-      await onLogin({ email: email.trim(), password });
+      // Login kupitia AuthContext
+      await login({
+        email: email.trim(),
+        password,
+      });
+
+      // Login successful: redirect kwenda dashboard
+      navigate("/home", { replace: true });
+
     } catch (err) {
-      setFormError(err?.message || "Something went wrong. Please try again.");
+      const responseData = err?.response?.data;
+
+      // Django REST Framework field errors
+      const serverErrors = {};
+
+      if (responseData?.email) {
+        serverErrors.email = Array.isArray(responseData.email)
+          ? responseData.email[0]
+          : responseData.email;
+      }
+
+      if (responseData?.password) {
+        serverErrors.password = Array.isArray(responseData.password)
+          ? responseData.password[0]
+          : responseData.password;
+      }
+
+      setErrors(serverErrors);
+
+      // Error ya login kutoka backend
+      setFormError(
+        responseData?.detail ||
+          err?.message ||
+          "Something went wrong. Please try again."
+      );
+
     } finally {
       setLoading(false);
     }
@@ -78,11 +124,12 @@ function LoginSection({ onLogin, onGoogle }) {
         <h1 className="mt-5 text-center text-[14px] font-semibold text-gray-950">
           Sign in to nikovoice
         </h1>
+
         <p className="mt-0.5 text-center text-[12px] text-gray-500">
           Welcome back! Please sign in to continue
         </p>
 
-        {/* Google (logo tu) */}
+        {/* Google */}
         <button
           type="button"
           onClick={onGoogle}
@@ -108,6 +155,7 @@ function LoginSection({ onLogin, onGoogle }) {
           >
             Email address
           </label>
+
           <input
             id="login-email"
             type="email"
@@ -118,8 +166,11 @@ function LoginSection({ onLogin, onGoogle }) {
             aria-invalid={Boolean(errors.email)}
             className={inputClass(errors.email)}
           />
+
           {errors.email && (
-            <p className="mt-1 text-[11px] text-red-600">{errors.email}</p>
+            <p className="mt-1 text-[11px] text-red-600">
+              {errors.email}
+            </p>
           )}
 
           <div className="mb-1 mt-3 flex items-center justify-between">
@@ -129,6 +180,7 @@ function LoginSection({ onLogin, onGoogle }) {
             >
               Password
             </label>
+
             <Link
               to="/forgot-password"
               className="text-[11px] text-[#673de6] hover:underline"
@@ -136,6 +188,7 @@ function LoginSection({ onLogin, onGoogle }) {
               Forgot password?
             </Link>
           </div>
+
           <div className="relative">
             <input
               id="login-password"
@@ -147,17 +200,25 @@ function LoginSection({ onLogin, onGoogle }) {
               aria-invalid={Boolean(errors.password)}
               className={`${inputClass(errors.password)} pr-9`}
             />
+
             <button
               type="button"
               onClick={() => setShowPassword((s) => !s)}
               aria-label={showPassword ? "Hide password" : "Show password"}
               className="absolute right-1 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded text-gray-500 hover:text-gray-900"
             >
-              {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+              {showPassword ? (
+                <EyeOff size={14} />
+              ) : (
+                <Eye size={14} />
+              )}
             </button>
           </div>
+
           {errors.password && (
-            <p className="mt-1 text-[11px] text-red-600">{errors.password}</p>
+            <p className="mt-1 text-[11px] text-red-600">
+              {errors.password}
+            </p>
           )}
 
           {formError && (
@@ -174,7 +235,10 @@ function LoginSection({ onLogin, onGoogle }) {
             disabled={loading}
             className="mt-5 flex h-9 w-full items-center justify-center gap-2 rounded-md bg-[#673de6] text-[13px] font-semibold text-white transition-colors hover:bg-[#5b32d4] disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {loading && <Loader2 size={14} className="animate-spin" />}
+            {loading && (
+              <Loader2 size={14} className="animate-spin" />
+            )}
+
             {loading ? "Signing in..." : "Continue"}
           </button>
         </form>
@@ -183,7 +247,10 @@ function LoginSection({ onLogin, onGoogle }) {
       {/* Footer */}
       <div className="border-t border-gray-200 bg-gray-50 px-6 py-3 text-center text-[12px] text-gray-600">
         Don&rsquo;t have an account?{" "}
-        <Link to="/signup" className="text-[#673de6] hover:underline">
+        <Link
+          to="/signup"
+          className="text-[#673de6] hover:underline"
+        >
           Sign up
         </Link>
       </div>

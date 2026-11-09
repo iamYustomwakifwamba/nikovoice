@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-tdgz7#2brgoz#9o9x#ejy=@@#bx9n6giadylkq=m7r-6$&(*=v
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 
 # Application definition
@@ -37,9 +37,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    "corsheaders",
+    "rest_framework",
+    "accounts",
+    "phonenumber_field",
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -125,3 +131,35 @@ MAILERS = {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
 }
+
+
+#CUSTOM SETTINGS
+AUTH_USER_MODEL = "accounts.User"
+
+PHONENUMBER_DEFAULT_REGION = "TZ"
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "register": "10/hour",
+        "login": "10/min",
+    },
+}
+
+CORS_ALLOWED_ORIGINS = [
+    
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    
+]
+
+CORS_ALLOW_CREDENTIALS = True
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+
+CSRF_TRUSTED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
