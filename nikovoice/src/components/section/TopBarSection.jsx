@@ -12,6 +12,7 @@ import {
   Sun,
   User,
 } from "lucide-react";
+import { useAuth } from "../../auth/useAuth";
 
 const THEME_KEY = "nikovoice-theme";
 
@@ -88,11 +89,14 @@ function AccountMenu({ email, onLogout }) {
   };
 
   const logout = async () => {
-    setOpen(false);
-    // TODO: unganisha na Django
-    // await fetch("/api/auth/logout/", { method: "POST", credentials: "include" });
-    await onLogout?.();
-    navigate("/login");
+    try {
+      await onLogout();
+      setOpen(false);
+      navigate("/login", { replace: true });
+    } catch (error) {
+      console.error("Logout failed:", error);
+      alert("Logout failed. Please try again.");
+    }
   };
 
   return (
@@ -166,8 +170,9 @@ function AccountMenu({ email, onLogout }) {
   );
 }
 
-function TopBarSection({ title, user, onLogout }) {
-  const email = user?.email ?? "you@example.com";
+function TopBarSection({ title }) {
+  const { user, logout } = useAuth();
+  const email = user?.email ?? "";
 
   return (
     <header
@@ -210,7 +215,7 @@ function TopBarSection({ title, user, onLogout }) {
           </button>
         </div>
 
-        <AccountMenu email={email} onLogout={onLogout} />
+        <AccountMenu email={email} onLogout={logout} />
       </div>
     </header>
   );

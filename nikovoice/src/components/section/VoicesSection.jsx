@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowDownUp,
@@ -10,6 +10,7 @@ import {
   Globe,
   GraduationCap,
   Languages,
+  Loader2,
   Megaphone,
   MessageCircle,
   Mic,
@@ -22,8 +23,15 @@ import {
   Smile,
   X,
 } from "lucide-react";
-import { VOICES, voiceLabel } from "./ttsShared";
+import { VOICES, voiceLabel } from "./TtsShared";
 import CreateVoiceModal from "../UI/CreateVoiceModal";
+import Alert from "../UI/Alert";
+import {
+  uploadVoiceSample,
+  uploadErrorMessage,
+  listVoiceSamples,
+  listErrorMessage,
+} from "../../services/voiceService";
 
 const CATEGORIES = [
   { id: "conversational", label: "Conversational", icon: MessageCircle },
@@ -276,7 +284,33 @@ function VoicesSection({ nowPlayingId, isPlaying, onPlay }) {
   const [sortBy, setSortBy] = useState("popular");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+
+  // My Voices zinatoka API (GET /api/media/voice-samples/)
   const [myVoices, setMyVoices] = useState([]);
+  const [myLoading, setMyLoading] = useState(true);
+  const [myError, setMyError] = useState("");
+  const [notice, setNotice] = useState(null);
+
+  const loadMyVoices = useCallback(async (signal) => {
+    setMyLoading(true);
+    setMyError("");
+    try {
+      const list = await listVoiceSamples({ signal });
+      setMyVoices(list);
+    } catch (err) {
+      // Tumeghairi (component imeondoka), usionyeshe kosa
+      if (signal?.aborted || err?.code === "ERR_CANCELED") return;
+      setMyError(listErrorMessage(err));
+    } finally {
+      if (!signal?.aborted) setMyLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    loadMyVoices(controller.signal);
+    return () => controller.abort();
+  }, [loadMyVoices]);
 
   const languages = useMemo(
     () => [...new Set(VOICES.map((v) => v.lang))].sort(),
@@ -299,6 +333,7 @@ function VoicesSection({ nowPlayingId, isPlaying, onPlay }) {
     setAge("");
   };
 
+  // Public voices: bado dummy kutoka TtsShared
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     const out = VOICES.filter(
@@ -323,23 +358,25 @@ function VoicesSection({ nowPlayingId, isPlaying, onPlay }) {
   // Kubofya jina la voice kunafungua Text to Speech ikiwa na voice hiyo
   const pick = (voice) => navigate("/text-to-speech", { state: { voice } });
 
-  // Inapokea { name, file, source } kutoka CreateVoiceModal
-  const handleCreate = ({ name, file }) => {
-    const voice = {
-      id: `my-${Date.now()}`,
-      name,
-      desc: "",
-      lang: "Custom",
-      accent: "",
-      more: 0,
-      category: "custom",
-      uses: 0,
-      file, // tuma kwenye backend kama reference_audio
-      previewUrl: URL.createObjectURL(file),
-    };
-    setMyVoices((list) => [voice, ...list]);
+  // Inapokea { name, file, source } kutoka CreateVoiceModal.
+  // Ikitupa kosa, modal inaonyesha ujumbe wake na inabaki wazi.
+  const handleCreate = async ({ name, file }) => {
+    let voice;
+    try {
+      voice = await uploadVoiceSample({ name, file });
+    } catch (err) {
+      throw new Error(uploadErrorMessage(err));
+    }
+
+    // Tunabaki na `file` kwa sasa ili TTS iweze kuitumia kama reference
+    setMyVoices((list) => [{ ...voice, file }, ...list]);
+    setMyError("");
     setCreateOpen(false);
     setTab("mine");
+    setNotice({
+      variant: "success",
+      text: `"${voice.name}" was added to your voices.`,
+    });
   };
 
   const gridProps = { nowPlayingId, isPlaying, onPlay, onPick: pick };
@@ -522,6 +559,25 @@ function VoicesSection({ nowPlayingId, isPlaying, onPlay }) {
             </>
           )}
         </>
+      ) : myLoading ? (
+        <div
+          className="flex items-center justify-center gap-2 py-28 text-[14px] text-gray-500"
+          role="status"
+        >
+          <Loader2 size={18} className="animate-spin" />
+          Loading your voices...
+        </div>
+      ) : myError ? (
+        <div className="flex flex-col items-center gap-3 py-28 text-center">
+          <p className="text-[14px] text-gray-700">{myError}</p>
+          <button
+            type="button"
+            onClick={() => loadMyVoices()}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-[14px] font-medium text-gray-900 hover:bg-gray-50"
+          >
+            Try again
+          </button>
+        </div>
       ) : myVoices.length === 0 ? (
         <div className="flex flex-col items-center gap-4 py-28 text-center">
           <span className="grid h-14 w-14 place-items-center rounded-2xl bg-gray-100 text-gray-500">
@@ -539,6 +595,19 @@ function VoicesSection({ nowPlayingId, isPlaying, onPlay }) {
         </div>
       ) : (
         <section className="mt-8">
+          {notice && (
+            <Alert
+              variant={notice.variant}
+              autoHideMs={5000}
+              onClose={() => setNotice(null)}
+              className="mb-4"
+            >
+              {notice.text}
+            </Alert>
+          )}
+          <h2 className="mb-4 text-[16px] font-semibold text-gray-900">
+            Your voices ({myVoices.length})
+          </h2>
           <VoiceGrid voices={myVoices} {...gridProps} />
         </section>
       )}

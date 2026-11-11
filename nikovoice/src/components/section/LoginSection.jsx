@@ -80,7 +80,6 @@ function LoginSection({ onGoogle }) {
 
       // Login successful: redirect kwenda dashboard
       navigate("/home", { replace: true });
-
     } catch (err) {
       const responseData = err?.response?.data;
 
@@ -105,9 +104,8 @@ function LoginSection({ onGoogle }) {
       setFormError(
         responseData?.detail ||
           err?.message ||
-          "Something went wrong. Please try again."
+          "Something went wrong. Please try again.",
       );
-
     } finally {
       setLoading(false);
     }
@@ -168,9 +166,7 @@ function LoginSection({ onGoogle }) {
           />
 
           {errors.email && (
-            <p className="mt-1 text-[11px] text-red-600">
-              {errors.email}
-            </p>
+            <p className="mt-1 text-[11px] text-red-600">{errors.email}</p>
           )}
 
           <div className="mb-1 mt-3 flex items-center justify-between">
@@ -207,18 +203,12 @@ function LoginSection({ onGoogle }) {
               aria-label={showPassword ? "Hide password" : "Show password"}
               className="absolute right-1 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded text-gray-500 hover:text-gray-900"
             >
-              {showPassword ? (
-                <EyeOff size={14} />
-              ) : (
-                <Eye size={14} />
-              )}
+              {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
             </button>
           </div>
 
           {errors.password && (
-            <p className="mt-1 text-[11px] text-red-600">
-              {errors.password}
-            </p>
+            <p className="mt-1 text-[11px] text-red-600">{errors.password}</p>
           )}
 
           {formError && (
@@ -235,9 +225,7 @@ function LoginSection({ onGoogle }) {
             disabled={loading}
             className="mt-5 flex h-9 w-full items-center justify-center gap-2 rounded-md bg-[#673de6] text-[13px] font-semibold text-white transition-colors hover:bg-[#5b32d4] disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {loading && (
-              <Loader2 size={14} className="animate-spin" />
-            )}
+            {loading && <Loader2 size={14} className="animate-spin" />}
 
             {loading ? "Signing in..." : "Continue"}
           </button>
@@ -247,10 +235,7 @@ function LoginSection({ onGoogle }) {
       {/* Footer */}
       <div className="border-t border-gray-200 bg-gray-50 px-6 py-3 text-center text-[12px] text-gray-600">
         Don&rsquo;t have an account?{" "}
-        <Link
-          to="/signup"
-          className="text-[#673de6] hover:underline"
-        >
+        <Link to="/signup" className="text-[#673de6] hover:underline">
           Sign up
         </Link>
       </div>

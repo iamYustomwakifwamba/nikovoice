@@ -5,7 +5,11 @@ import TextToSpeechHistory from "../section/TextToSpeechHistory";
 import TextToSpeechPlayer from "../section/TextToSpeechPlayer";
 import TopBarSection from "../section/TopBarSection";
 import TextToSpeechSection from "../section/TextToSpeechSection";
-import { AUTO_VOICE, VOICES, makeDemoAudio } from "../section/TtsShared";
+import useTtsHistory from "../../services/Usettshistory";
+import {
+  generateSpeech,
+  generateErrorMessage,
+} from "../../services/Ttsservice";
 
 // Lugha 23 za Chatterbox Multilingual
 const LANGUAGES = [
@@ -40,51 +44,6 @@ const DEFAULT_SETTINGS = {
   cfg: 0.5,
   temperature: 0.8,
 };
-
-const MIN = 60 * 1000;
-const DAY = 24 * 60 * MIN;
-const ago = (ms) => new Date(Date.now() - ms).toISOString();
-const byId = (id) => VOICES.find((v) => v.id === id);
-
-// Data ya mfano. Ondoa makeDemoAudio na seed ukiunganisha na backend.
-const demo = makeDemoAudio(3);
-const SEED_HISTORY = [
-  {
-    id: "h1",
-    text: "Karibu kwenye nikovoice, sauti yako, njia yako.",
-    voice: byId("amani"),
-    createdAt: ago(12 * MIN),
-    audioUrl: demo,
-  },
-  {
-    id: "h2",
-    text: "Habari za asubuhi wananchi, leo tuna habari kubwa kutoka Mbeya.",
-    voice: byId("baraka"),
-    createdAt: ago(3 * 60 * MIN),
-    audioUrl: demo,
-  },
-  {
-    id: "h3",
-    text: "Ni sawa.",
-    voice: byId("neema"),
-    createdAt: ago(2 * DAY),
-    audioUrl: demo,
-  },
-  {
-    id: "h4",
-    text: "Njoo hapa, njoo hapa, njoo hapa.",
-    voice: byId("zawadi"),
-    createdAt: ago(2 * DAY + 5 * MIN),
-    audioUrl: demo,
-  },
-  {
-    id: "h5",
-    text: "Hapana, hapana, hapana, ni sawa.",
-    voice: byId("juma"),
-    createdAt: ago(40 * DAY),
-    audioUrl: demo,
-  },
-];
 
 function Slider({ label, value, min, max, step, onChange, left, right, hint }) {
   return (
@@ -129,10 +88,11 @@ function SettingsPanel({ settings, onChange }) {
         ))}
       </select>
 
+      {/* Backend inakubali 0.25 hadi 2.0 (chini ya 0.25 inarudisha kosa) */}
       <Slider
         label="Exaggeration"
-        min={0}
-        max={1}
+        min={0.25}
+        max={2}
         step={0.05}
         value={settings.exaggeration}
         onChange={set("exaggeration")}
@@ -179,9 +139,12 @@ function TextToSpeechLayout() {
   const [text, setText] = useState("");
   const [voice, setVoice] = useState(location.state?.voice ?? null);
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
-  const [history, setHistory] = useState(SEED_HISTORY);
   const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState("");
   const [result, setResult] = useState(null); // audio mpya, inaonekana kama waveform
+
+  // History halisi kutoka API (GET /api/media/tts-history/)
+  const history = useTtsHistory();
 
   // Bottom player: History tu
   const audioRef = useRef(null);
@@ -209,45 +172,52 @@ function TextToSpeechLayout() {
 
   const handleGenerate = async () => {
     if (!text.trim() || generating) return;
+
+    // Django inahitaji voice sample ya mtumiaji (voice_sample_id kutoka database).
+    // Public voices za dummy na Auto-select hazina serverId.
+    if (!voice?.serverId) {
+      setError('Select one of your own voices from "My voices" first.');
+      return;
+    }
+
     setGenerating(true);
+    setError("");
     setResult(null);
     resultAudioRef.current?.pause();
     try {
-      // TODO: unganisha na backend yako (Django -> worker)
-      // const form = new FormData();
-      // form.append("text", text);
-      // form.append("language", settings.language);
-      // form.append("exaggeration", settings.exaggeration);
-      // form.append("cfg_weight", settings.cfg);
-      // form.append("temperature", settings.temperature);
-      // if (voice?.file) form.append("reference_audio", voice.file);
-      // else if (voice) form.append("voice_id", voice.id);
-      // const res = await fetch("/api/tts", { method: "POST", body: form });
-      // const { audio_url: audioUrl } = await res.json();
-      await new Promise((r) => setTimeout(r, 1800));
-      const audioUrl = makeDemoAudio(4);
+      const { audioUrl } = await generateSpeech({
+        text: text.trim(),
+        voiceSampleId: voice.serverId,
+        language: settings.language,
+        exaggeration: settings.exaggeration,
+        cfgWeight: settings.cfg,
+        temperature: settings.temperature,
+      });
 
       const item = {
         id: crypto.randomUUID(),
         text: text.trim(),
-        voice: voice ?? AUTO_VOICE,
+        voice,
         createdAt: new Date().toISOString(),
         audioUrl,
       };
 
-      setHistory((h) => [item, ...h]); // inaingia History
+      history.addItem(item); // inaingia juu ya History
       setResult(item); // inaonekana kama waveform chini ya input
       setTab("history");
       // Makusudi: HAKUNA setNowPlaying hapa. Bottom player haifunguki yenyewe.
+    } catch (err) {
+      setError(generateErrorMessage(err));
     } finally {
       setGenerating(false);
     }
   };
 
-  // Rudisha text na voice kwenye editor
+  // Rudisha text na voice kwenye editor.
+  // Voice inarudi tu kama ni voice ya mtumiaji (ina serverId).
   const handleUseText = (item) => {
     setText(item.text);
-    setVoice(item.voice.id === "auto" ? null : item.voice);
+    setVoice(item.voice?.serverId ? item.voice : null);
   };
 
   return (
@@ -269,9 +239,13 @@ function TextToSpeechLayout() {
               onVoiceChange={setVoice}
               onGenerate={handleGenerate}
               generating={generating}
+              error={error}
               result={result}
               resultAudioRef={resultAudioRef}
               onResultPlay={() => audioRef.current?.pause()}
+              nowPlayingId={nowPlaying?.id ?? null}
+              isPlaying={isPlaying}
+              onPlay={handlePlay}
             />
           </main>
 
@@ -296,7 +270,10 @@ function TextToSpeechLayout() {
             <div className="min-h-0 flex-1">
               {tab === "history" ? (
                 <TextToSpeechHistory
-                  items={history}
+                  items={history.items}
+                  loading={history.loading}
+                  error={history.error}
+                  onRetry={history.reload}
                   nowPlayingId={nowPlaying?.id}
                   isPlaying={isPlaying}
                   onPlay={handlePlay}

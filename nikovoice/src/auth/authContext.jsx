@@ -10,6 +10,7 @@ import {
   login as loginService,
   register as registerService,
   getProfile,
+  logout as logoutService,
 } from "./authService";
 
 export const AuthContext = createContext(null);
@@ -18,11 +19,9 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check existing session when application starts
   const checkAuth = useCallback(async () => {
     try {
       const data = await getProfile();
-
       setUser(data.user);
     } catch (error) {
       setUser(null);
@@ -35,23 +34,19 @@ export function AuthProvider({ children }) {
     checkAuth();
   }, [checkAuth]);
 
-  // Login
   const login = async (credentials) => {
     const data = await loginService(credentials);
-
     setUser(data.user);
-
     return data.user;
   };
 
-  // Register
   const register = async (userData) => {
     return await registerService(userData);
   };
 
-  // Logout placeholder
   const logout = async () => {
-    throw new Error("Logout endpoint has not been implemented yet.");
+    await logoutService();
+    setUser(null);
   };
 
   const value = {

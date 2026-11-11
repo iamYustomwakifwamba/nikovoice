@@ -12,6 +12,8 @@ import {
   X,
 } from "lucide-react";
 
+import Alert from "../UI/Alert";
+
 const MAX_RECORD_S = 30;
 const MAX_UPLOAD_MB = 25;
 const AUDIO_EXT = /\.(mp3|wav|m4a|aac|flac|ogg|oga|opus|webm)$/i;
@@ -842,12 +844,9 @@ function CreateVoiceModal({ open, onClose, onCreate }) {
         </div>
 
         {error && (
-          <p
-            role="alert"
-            className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-[13px] text-red-700"
-          >
+          <Alert variant="error" onClose={() => setError("")} className="mt-3">
             {error}
-          </p>
+          </Alert>
         )}
 
         <label className="mt-4 flex cursor-pointer items-start gap-2.5 text-[13px] text-gray-600">

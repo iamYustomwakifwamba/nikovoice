@@ -3,15 +3,19 @@ import {
   AlignLeft,
   Check,
   Download,
+  Loader2,
   Mic,
   Pause,
   Play,
   Plus,
   Search,
 } from "lucide-react";
-import { voiceLabel } from "./ttsShared";
+import { voiceLabel } from "./TtsShared";
 
 const DAY = 24 * 60 * 60 * 1000;
+
+// Herufi zinazoonyeshwa kwenye mstari wa kwanza wa kila item ya history
+const EXCERPT_CHARS = 40;
 
 const DATE_OPTIONS = [
   { id: "", label: "All time" },
@@ -19,6 +23,22 @@ const DATE_OPTIONS = [
   { id: "7", label: "Last 7 days" },
   { id: "30", label: "Last 30 days" },
 ];
+
+// "Tanzania ni nchi yenye uzuri wa kipekee na watu..." -> "Tanzania ni nchi yenye uzuri wa kipekee..."
+// Haikati neno katikati: inarudi kwenye nafasi ya mwisho.
+function excerpt(text, max = EXCERPT_CHARS) {
+  const clean = String(text ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (clean.length <= max) return clean;
+
+  let cut = clean.slice(0, max);
+  if (clean[max] !== " ") {
+    const lastSpace = cut.lastIndexOf(" ");
+    if (lastSpace > max * 0.5) cut = cut.slice(0, lastSpace);
+  }
+  return `${cut.trimEnd().replace(/[,.;:!?-]+$/, "")}...`;
+}
 
 function timeAgo(iso) {
   const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
@@ -122,6 +142,9 @@ function ActionBtn({ label, onClick, href, download, children }) {
 
 function TextToSpeechHistory({
   items,
+  loading,
+  error,
+  onRetry,
   nowPlayingId,
   isPlaying,
   onPlay,
@@ -182,7 +205,26 @@ function TextToSpeechHistory({
       </div>
 
       <div className="mt-3 flex-1 overflow-y-auto px-3 pb-6">
-        {list.length === 0 ? (
+        {loading ? (
+          <div
+            role="status"
+            className="flex items-center justify-center gap-2 py-16 text-[14px] text-gray-500"
+          >
+            <Loader2 size={16} className="animate-spin" />
+            Loading history...
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center gap-3 px-4 py-16 text-center">
+            <p className="text-[14px] text-gray-700">{error}</p>
+            <button
+              type="button"
+              onClick={onRetry}
+              className="rounded-lg border border-gray-300 px-3.5 py-1.5 text-[14px] font-medium text-gray-900 hover:bg-gray-50"
+            >
+              Try again
+            </button>
+          </div>
+        ) : list.length === 0 ? (
           <p className="py-16 text-center text-[14px] text-gray-500">
             {items.length === 0
               ? "Your generated speech will appear here."
@@ -204,10 +246,12 @@ function TextToSpeechHistory({
                     <button
                       type="button"
                       onClick={() => item.audioUrl && onPlay(item)}
+                      // Maandishi kamili yanaonekana ukiweka mouse juu
+                      title={item.text}
                       className="min-w-0 flex-1 text-left outline-none"
                     >
                       <p className="truncate text-[15px] font-semibold text-gray-900">
-                        {item.text}
+                        {excerpt(item.text)}
                       </p>
                       <p className="mt-0.5 flex items-center gap-1.5 text-[13px] font-normal text-gray-500">
                         <Mic

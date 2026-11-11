@@ -223,3 +223,37 @@ export const VOICES = [
     added: "2y",
   },
 ];
+
+// Voices za mfano za mtumiaji. Ondoa ukiunganisha na backend (GET /api/voices).
+export const MY_VOICES = [
+  {
+    id: "my-sample-1",
+    name: "Sauti yangu ya habari",
+    desc: "",
+    lang: "Custom",
+    accent: "",
+    more: 0,
+    category: "custom",
+    uses: 0,
+  },
+  {
+    id: "my-sample-2",
+    name: "Narrator wa matangazo",
+    desc: "",
+    lang: "Custom",
+    accent: "",
+    more: 0,
+    category: "custom",
+    uses: 0,
+  },
+  {
+    id: "my-sample-3",
+    name: "Rekodi ya majaribio",
+    desc: "",
+    lang: "Custom",
+    accent: "",
+    more: 0,
+    category: "custom",
+    uses: 0,
+  },
+];

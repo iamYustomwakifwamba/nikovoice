@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     "rest_framework",
     "accounts",
     "phonenumber_field",
+    "media_library",
+    "tts_engine"
 ]
 
 MIDDLEWARE = [
@@ -163,3 +165,12 @@ SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
 
 CSRF_TRUSTED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+#https://97yywmq9pgnjst-8000.proxy.runpod.net/
+
+CHATTERBOX_API_URL = (
+    "https://97yywmq9pgnjst-8000.proxy.runpod.net"
+)

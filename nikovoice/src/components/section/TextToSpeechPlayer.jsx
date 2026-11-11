@@ -1,7 +1,9 @@
 import { useState } from "react";
 import {
+  AudioLines,
   ChevronDown,
   Download,
+  Mic,
   Pause,
   Play,
   RotateCcw,
@@ -24,7 +26,8 @@ function SkipBtn({ dir, onClick }) {
       type="button"
       onClick={onClick}
       aria-label={dir < 0 ? "Back 10 seconds" : "Forward 10 seconds"}
-      className="relative grid h-9 w-9 place-items-center rounded-full text-gray-900 hover:bg-gray-100"
+      title={dir < 0 ? "Back 10 seconds" : "Forward 10 seconds"}
+      className="relative grid h-9 w-9 place-items-center rounded-full text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-950/20"
     >
       <Icon size={22} strokeWidth={1.5} />
       <span className="absolute text-[8px] font-bold leading-none">10</span>
@@ -74,7 +77,7 @@ function TextToSpeechPlayer({ item, audioRef, onPlayingChange, onClose }) {
   const pct = duration ? Math.min(100, (time / duration) * 100) : 0;
 
   return (
-    <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_minmax(0,560px)_minmax(0,1fr)] items-center gap-4 border-t border-gray-200 bg-white px-6 py-3">
+    <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_minmax(0,560px)_minmax(0,1fr)] items-center gap-4 border-t border-gray-200 bg-white px-6 py-3 shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.12)]">
       <audio
         ref={audioRef}
         src={item.audioUrl}
@@ -99,14 +102,28 @@ function TextToSpeechPlayer({ item, audioRef, onPlayingChange, onClose }) {
       />
 
       {/* Left: info */}
-      <div className="min-w-0">
-        <p className="truncate text-[14px] font-medium text-gray-900">
-          {item.text}
-        </p>
-        <p className="mt-0.5 flex items-center gap-1.5 truncate text-[12.5px] text-gray-500">
-          <span aria-hidden="true">🎙️</span>
-          <span className="truncate">{voiceLabel(item.voice)}</span>
-        </p>
+      <div className="flex min-w-0 items-center gap-3">
+        <span
+          aria-hidden="true"
+          className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl transition-colors ${
+            playing ? "bg-gray-950 text-white" : "bg-gray-100 text-gray-600"
+          }`}
+        >
+          <AudioLines size={20} strokeWidth={1.75} />
+        </span>
+
+        <div className="min-w-0">
+          <p
+            title={item.text}
+            className="truncate text-[14px] font-semibold text-gray-900"
+          >
+            {item.text}
+          </p>
+          <p className="mt-0.5 flex items-center gap-1.5 text-[12.5px] text-gray-500">
+            <Mic size={13} strokeWidth={1.75} className="shrink-0" />
+            <span className="truncate">{voiceLabel(item.voice)}</span>
+          </p>
+        </div>
       </div>
 
       {/* Center: controls */}
@@ -117,7 +134,7 @@ function TextToSpeechPlayer({ item, audioRef, onPlayingChange, onClose }) {
             type="button"
             onClick={toggle}
             aria-label={playing ? "Pause" : "Play"}
-            className="grid h-10 w-10 place-items-center rounded-full bg-gray-950 text-white hover:bg-gray-800"
+            className="grid h-10 w-10 place-items-center rounded-full bg-gray-950 text-white shadow-sm transition hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-950 focus-visible:ring-offset-2 active:scale-95"
           >
             {playing ? (
               <Pause size={16} fill="currentColor" />
@@ -138,7 +155,7 @@ function TextToSpeechPlayer({ item, audioRef, onPlayingChange, onClose }) {
             value={Math.min(time, duration || 0)}
             onChange={seek}
             aria-label="Seek"
-            className="h-1 flex-1 cursor-pointer appearance-none rounded-full [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-gray-950 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gray-950"
+            className="h-1 flex-1 cursor-pointer appearance-none rounded-full transition-all hover:h-1.5 [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-gray-950 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gray-950"
             style={{
               background: `linear-gradient(to right, #030712 ${pct}%, #e5e7eb ${pct}%)`,
             }}
@@ -152,7 +169,7 @@ function TextToSpeechPlayer({ item, audioRef, onPlayingChange, onClose }) {
         <button
           type="button"
           onClick={share}
-          className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-[14px] font-medium text-gray-900 hover:bg-gray-50"
+          className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-[14px] font-medium text-gray-900 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-950/20"
         >
           <Share2 size={16} />
           {copied ? "Copied" : "Share"}
@@ -162,7 +179,7 @@ function TextToSpeechPlayer({ item, audioRef, onPlayingChange, onClose }) {
           download={`nikovoice-${item.id}.wav`}
           aria-label="Download"
           title="Download"
-          className="grid h-9 w-9 place-items-center rounded-lg text-gray-900 hover:bg-gray-100"
+          className="grid h-9 w-9 place-items-center rounded-lg text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-950/20"
         >
           <Download size={18} />
         </a>
@@ -171,7 +188,7 @@ function TextToSpeechPlayer({ item, audioRef, onPlayingChange, onClose }) {
           onClick={onClose}
           aria-label="Close player"
           title="Close player"
-          className="grid h-9 w-9 place-items-center rounded-lg text-gray-900 hover:bg-gray-100"
+          className="grid h-9 w-9 place-items-center rounded-lg text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-950/20"
         >
           <ChevronDown size={18} />
         </button>
